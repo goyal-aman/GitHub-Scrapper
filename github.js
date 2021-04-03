@@ -50,7 +50,33 @@ function getAllProjects(url, name){
             }else{
                 data[name].push({projectName, projectUrl});
             }
-            fs.writeFileSync("data.json", JSON.stringify(data));
+            // fs.writeFileSync("data.json", JSON.stringify(data));
+            getIssues(projectUrl, name, projectName);
         }
+    });
+}
+
+function getIssues(url, topicName, projectName){
+    request(url+"/issues" ,function(err,res, body){
+        $ = cheerio.load(body);
+        let allIssues = $(
+            ".Link--primary.v-align-middle.no-underline.h4,js-navigation-open markdown-title"
+        );
+
+        for(let i=0; i<allIssues.length; i++){
+            let IssueTitle = $(allIssues[i]).text().trim();
+            let IssueUrl = "https://github.com" + $(allIssues[i]).attr("href");
+            
+            let idx = data[topicName].findIndex(function(e){
+                return e.projectName == projectName
+            });
+
+            if(!data[topicName][idx].issues){
+                data[topicName][idx].issues = [{IssueTitle, IssueUrl}];
+            }else{
+                data[topicName][idx].issues.push({IssueTitle, IssueUrl});
+            }
+        }
+        fs.writeFileSync("data.json", JSON.stringify(data));
     });
 }
