@@ -1,6 +1,7 @@
 let request = require("request");
 let cheerio = require("cheerio");
 let fs = require("fs");
+const { jsPDF } = require("jspdf");
 let $;
 let data = {};
 request("https://github.com/topics", getTopicPage);
@@ -20,6 +21,7 @@ function getTopicPage(err, res, body){
     );
 
     for(let i=0; i<allTopicAnchors.length; i++){
+        fs.mkdirSync($(allTopicNames[i]).text().trim());
         getAllProjects(
             "https://github.com/"+ $(allTopicAnchors[i]).attr("href"),
             $(allTopicNames[i]).text().trim()
@@ -53,6 +55,8 @@ function getAllProjects(url, name){
             // fs.writeFileSync("data.json", JSON.stringify(data));
             getIssues(projectUrl, name, projectName);
         }
+        
+        
     });
 }
 
@@ -77,6 +81,27 @@ function getIssues(url, topicName, projectName){
                 data[topicName][idx].issues.push({IssueTitle, IssueUrl});
             }
         }
-        fs.writeFileSync("data.json", JSON.stringify(data));
+        pdfGenerator()
     });
+}
+function pdfGenerator(){
+    for(topicName in data){
+        let topicArr = data[topicName];
+        for(projectIdx in topicArr){
+            let ProjectName = topicArr[projectIdx].projectName;
+            if(fs.existsSync(`${topicName}/${ProjectName}.pdf`)){
+                fs.unlinkSync(`${topicName}/${ProjectName}.pdf`)
+            }
+            const doc = new jsPDF();
+                     
+            for(issue in topicArr[projectIdx].issues){ 
+                // console.log("check")    
+                doc.text(topicArr[projectIdx].issues[issue].IssueTitle,10, 10 + 15*issue);   
+                doc.text(topicArr[projectIdx].issues[issue].IssueUrl, 10,15 + 15*issue)   
+                // console.log(topicArr[projectIdx].issues[issue].IssueTitle,10, 10 + 10*issue);   
+                // console.log(topicArr[projectIdx].issues[issue].IssueUrl, 10,10 + 15*issue)   
+            }
+            doc.save(`${topicName}/${ProjectName}.pdf`);
+        }
+    }
 }
